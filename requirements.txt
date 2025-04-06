@@ -1,0 +1,14 @@
+
+torch
+transformers
+scikit-learn
+sentencepiece
+sentencepiece
+nltk
+sentence_transformers
+wordcloud
+nltk
+seaborn
+shap==0.47.1
+captum==0.8.0
+hf_xet==1.0.0
