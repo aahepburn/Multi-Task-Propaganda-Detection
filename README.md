@@ -1,5 +1,7 @@
 # Project Outline
 
+## "Towards Robust Propaganda Detection: Addressing Distribution Shifts via Multi-Task Learning"
+
 ## Abstract:
 
 The limitations of Transformer-based NLP systems, coupled with the fragmented nature of computational propaganda research, continue to hinder system generalisability. The diverse contexts and domains that define the field pose challenges for NLP methodologies, which remain highly susceptible to distribution shifts. While these limitations are widely acknowledged, they are rarely studied systematically. This thesis explores whether multi-task learning can improve model robustness through shared representations across persuasion detection tasks. Through a comparative evaluation of single-task and multi-task architectures, the study examines generalisation under domain and label shifts. Post-hoc interpretability methods assess whether MTL models capture transferable linguistic features rather than domain-specific artefacts. This work contributes to ongoing research on robust NLP methods in the digital humanities and other related fields.
