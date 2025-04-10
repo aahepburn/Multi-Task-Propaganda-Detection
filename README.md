@@ -21,7 +21,6 @@ Other notebooks:
 
 
 
-"Towards Robust Propaganda Detection: Addressing Distribution Shifts via Multi-Task Learning"
 
 ## Abstract:
 
