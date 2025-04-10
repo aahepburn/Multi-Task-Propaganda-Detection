@@ -1,4 +1,4 @@
-# Read me before opening the notenooks
+# Read me first.
 
 The current preliminary results are based on:
 
