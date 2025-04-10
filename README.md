@@ -10,7 +10,7 @@ AND
 
 Other notebooks:
 
-**- single-task-learning-final-zeroshot.ipynb** contains experiments on zero-shot learning using label embeddings. This is work in progress and is not included in the preliminary results.
+**- STL-zeroshot-experiments.ipynb** contains experiments on zero-shot learning using label embeddings. This is work in progress and is not included in the preliminary results.
 
 **-translation-GPT-4o.ipynb** contains the machine translation pipeline.
 
