@@ -1,6 +1,24 @@
-# Project Outline
+# Read me before opening the notenooks
 
-## "Towards Robust Propaganda Detection: Addressing Distribution Shifts via Multi-Task Learning"
+The current preliminary results are based on:
+
+**- single-task-learning.ipynb**
+**- multi-task-learning.ipynb**
+
+Other notebooks:
+
+**- single-task-learning-final-zeroshot.ipynb** contains experiments on zero-shot learning using label embeddings. This is work in progress and is not included in the preliminary results.
+
+**-translation-GPT-4o.ipynb** contains the machine translation pipeline.
+
+**- domain-encoding.ipynb** contains some functions to infer the domain of each article.
+
+
+
+
+
+
+"Towards Robust Propaganda Detection: Addressing Distribution Shifts via Multi-Task Learning"
 
 ## Abstract:
 
