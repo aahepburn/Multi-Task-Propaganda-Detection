@@ -8,6 +8,12 @@ AND
 
 **- multi-task-learning.ipynb**
 
+
+<img width="606" alt="Screenshot 2025-04-14 at 2 10 03 PM" src="https://github.com/user-attachments/assets/3744ead2-698a-4ec0-9b47-8cffb66ede95" />
+
+
+
+
 Other notebooks:
 
 **- STL-zeroshot-experiments.ipynb** contains experiments on zero-shot learning using label embeddings. This is work in progress and is not included in the preliminary results.
