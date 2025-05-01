@@ -1,6 +1,6 @@
 # Read me first.
 
-I run all my experiments from master_notebook.ipynb. The notebook makes calls to relevant APIs, which are stored in respective .py files. The most interesting files to look at would be single_task.py and multi_task.py, which contain the model classes I used in my experiments.
+I run all my experiments from **master_notebook.ipynb**. The notebook makes calls to relevant APIs, which are stored in respective .py files. The most interesting files to look at would be **single_task.py** and **multi_task.py**, which contain all of the model classes I used in my experiments.
 
 
 
