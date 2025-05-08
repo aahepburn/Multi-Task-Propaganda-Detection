@@ -7,6 +7,7 @@ import numpy as np
 from tqdm import tqdm
 from itertools import cycle
 
+
 # ==========================
 # MODEL CLASS
 # ==========================
@@ -201,6 +202,59 @@ def predict_proba(model, loader, task, device):
             outputs = model(input_ids, attention_mask, task=task)
             probs.extend(torch.sigmoid(outputs).cpu().numpy())
     return np.array(probs)
+
+
+
+# MTL ADAPTER
+
+
+class TaskAdapter(nn.Module):
+    """PAL-like adapter: small bottleneck MLP acting as residual to the encoder output."""
+    def __init__(self, hidden_size, bottleneck_dim=128):
+        super().__init__()
+        self.down_project = nn.Linear(hidden_size, bottleneck_dim)
+        self.activation = nn.ReLU()
+        self.up_project = nn.Linear(bottleneck_dim, hidden_size)
+
+    def forward(self, x):
+        return self.up_project(self.activation(self.down_project(x)))
+
+
+class AdapterMultiTaskTransformer(nn.Module):
+    def __init__(self, model_name, num_classes_dict, adapter_dim=128):
+        super().__init__()
+        self.encoder = AutoModel.from_pretrained(model_name)
+        self.hidden_size = self.encoder.config.hidden_size
+        self.dropout = nn.Dropout(0.3)
+
+        # Task adapters (PALs)
+        self.adapters = nn.ModuleDict({
+            "narrative_classification": TaskAdapter(self.hidden_size, adapter_dim),
+            "entity_framing": TaskAdapter(self.hidden_size, adapter_dim)
+        })
+
+        # Task-specific heads
+        self.task_heads = nn.ModuleDict({
+            "narrative_classification": nn.Linear(self.hidden_size, num_classes_dict["narrative_classification"]),
+            "entity_framing": nn.Linear(self.hidden_size, num_classes_dict["entity_framing"])
+        })
+
+    def forward(self, input_ids, attention_mask, task):
+        # BERT encoder output
+        outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
+        pooled_output = outputs.last_hidden_state[:, 0]  # CLS token
+
+        # Add residual adapter
+        adapter_output = self.adapters[task](pooled_output)
+        adapted_output = pooled_output + adapter_output
+
+        adapted_output = self.dropout(adapted_output)
+        return self.task_heads[task](adapted_output)
+
+
+
+
+
 
 
 def evaluate_threshold_sweep(y_true, y_pred, thresholds=np.arange(0.1, 0.9, 0.05)):

@@ -1,6 +1,12 @@
 import numpy as np
 import pandas as pd
 import torch
+from tqdm import tqdm
+from sklearn.metrics import f1_score,classification_report
+
+import numpy as np
+import pandas as pd
+import torch
 from sklearn.metrics import f1_score,classification_report
 
 
@@ -10,7 +16,7 @@ from sklearn.metrics import f1_score,classification_report
 # FIXED THRESHOLD EVALUATION
 # ==========================
 
-def evaluate_flat(loader, df_source, mlb, label="TEST", threshold=0.25):
+def evaluate_flat(model, loader, df_source, mlb, device, label="TEST", threshold=0.25):
 
     """
     Evaluates a multi-label classification model using a fixed probability threshold.
@@ -99,37 +105,34 @@ def evaluate_flat(loader, df_source, mlb, label="TEST", threshold=0.25):
 
 # ----------------------------
 # EVALUATE PER DOMAIN
-
-def evaluate_per_domain_flat(val_loader, df_val, test_loader, df_test, mlb, threshold=0.25):
+def evaluate_per_domain_flat(model, val_loader, df_val, test_loader, df_test, mlb, device, threshold=0.25):
     """
-        REQUIRES the 'evaluate' function
+    Evaluates model performance separately on validation and test domains using a fixed threshold.
 
-        Evaluates model performance separately on validation and test domains using a fixed threshold.
+    Args:
+        model (torch.nn.Module): Trained model to evaluate.
+        val_loader (DataLoader): PyTorch DataLoader for the validation set.
+        df_val (pd.DataFrame): Original validation DataFrame containing domain info and labels.
+        test_loader (DataLoader): PyTorch DataLoader for the test set.
+        df_test (pd.DataFrame): Original test DataFrame containing domain info and labels.
+        mlb (MultiLabelBinarizer): Fitted MultiLabelBinarizer used for decoding/encoding label space.
+        threshold (float, optional): Probability threshold for binarizing predictions. Defaults to 0.25.
 
-        Args:
-            val_loader (DataLoader): PyTorch DataLoader for the validation set.
-            df_val (pd.DataFrame): Original validation DataFrame containing domain info and labels.
-            test_loader (DataLoader): PyTorch DataLoader for the test set.
-            df_test (pd.DataFrame): Original test DataFrame containing domain info and labels.
-            mlb (MultiLabelBinarizer): Fitted MultiLabelBinarizer used for decoding/encoding label space.
-            threshold (float, optional): Probability threshold for binarizing predictions. Defaults to 0.25.
-
-        Returns:
-            dict: A dictionary with:
-                - 'val': Evaluation metrics on the validation set
-                - 'test': Evaluation metrics on the test set
-                - 'ood_gap_macro': Difference in macro F1 between validation and test sets
+    Returns:
+        dict: A dictionary with:
+            - 'val': Evaluation metrics on the validation set
+            - 'test': Evaluation metrics on the test set
+            - 'ood_gap_macro': Difference in macro F1 between validation and test sets
     """
-
     print("\n=========================")
     print("Validation (Fixed Threshold)")
     print("=========================")
-    val_results = evaluate_flat(val_loader, df_val.reset_index(drop=True), mlb, label="VALIDATION", threshold=threshold)
+    val_results = evaluate_flat(model, val_loader, df_val.reset_index(drop=True), mlb, device, label="VALIDATION", threshold=threshold)
 
     print("\n=========================")
     print("Test (Fixed Threshold)")
     print("=========================")
-    test_results = evaluate_flat(test_loader, df_test.reset_index(drop=True), mlb, label="TEST", threshold=threshold)
+    test_results = evaluate_flat(model, test_loader, df_test.reset_index(drop=True), mlb, device, label="TEST", threshold=threshold)
 
     print("\n=========================")
     print("OOD Generalization (Fixed Threshold)")
@@ -143,10 +146,12 @@ def evaluate_per_domain_flat(val_loader, df_val, test_loader, df_test, mlb, thre
         "ood_gap_macro": macro_drop
     }
 
+
 # --------------------
 # EVALUATE PER CLASS
 
-def evaluate_per_class_flat(loader, df_source, mlb, label="TEST", threshold=0.25):
+def evaluate_per_class_flat(model, loader, df_source, mlb, device, label="TEST", threshold=0.25):
+
     """
         Evaluates a multi-label classification model and produces per-class and per-domain metrics.
 
@@ -255,7 +260,7 @@ def evaluate_per_class_flat(loader, df_source, mlb, label="TEST", threshold=0.25
 # FIXED THRESHOLD EVALUATION (HIERARCHY-AWARE)
 # ==========================
 
-def evaluate_hierarchy(loader, df_source, mlb, label="TEST", threshold=0.25): 
+def evaluate_hierarchy(model,loader, df_source, mlb, device, label="TEST", threshold=0.25): 
     model.eval()
     y_true, y_pred, domains = [], [], []
 
@@ -331,12 +336,12 @@ def evaluate_per_domain_hierarchy(val_loader, df_val, test_loader, df_test, mlb,
     print("\n=========================")
     print("Validation (Fixed Threshold)")
     print("=========================")
-    val_results = evaluate_hierarchy(val_loader, df_val.reset_index(drop=True), mlb, label="VALIDATION", threshold=threshold)
+    val_results = evaluate_hierarchy(val_loader, df_val.reset_index(drop=True), mlb, device, label="VALIDATION", threshold=threshold)
 
     print("\n=========================")
     print("Test (Fixed Threshold)")
     print("=========================")
-    test_results = evaluate_hierarchy(test_loader, df_test.reset_index(drop=True), mlb, label="TEST", threshold=threshold)
+    test_results = evaluate_hierarchy(test_loader, df_test.reset_index(drop=True), mlb, device, label="TEST", threshold=threshold)
 
     print("\n=========================")
     print("OOD Generalization (Fixed Threshold)")
@@ -513,29 +518,56 @@ def evaluate_mtl_hierarchical_task(model, test_loader, df_test, y_test, mlb, tas
 
     y_pred = np.array(y_pred)
     y_pred_bin = (y_pred > 0.25).astype(float)
-    
+
     # Apply hierarchical constraints
     y_pred_bin = apply_hierarchical_constraints_mtl(y_pred_bin, child_to_parent, label_to_index).astype(int)
 
-    print(f"\n[Hierarchical Evaluation] Task: {task_name}")
-    macro_f1 = f1_score(y_test, y_pred_bin, average="macro", zero_division=0)
-    print(f"Macro F1: {macro_f1:.4f}")
+    # Filter unused labels (for safe reporting)
+    mask = (y_test.sum(axis=0) + y_pred_bin.sum(axis=0)) > 0
+    y_test = y_test[:, mask]
+    y_pred_bin = y_pred_bin[:, mask]
+    filtered_labels = np.array(mlb.classes_)[mask]
 
-    # ===============================
-    # PER DOMAIN EVALUATION
-    # ===============================
-    print("\n[Per-Domain Macro F1]")
+    # === Overall Metrics ===
+    macro_f1 = f1_score(y_test, y_pred_bin, average="macro", zero_division=0)
+    micro_f1 = f1_score(y_test, y_pred_bin, average="micro", zero_division=0)
+    exact = (y_pred_bin == y_test).all(axis=1).mean()
+
+    print(f"\n[Hierarchical Evaluation] Task: {task_name}")
+    print(f"Macro F1: {macro_f1:.4f}")
+    print(f"Micro F1: {micro_f1:.4f}")
+    print(f"Exact Match: {exact:.4f}")
+
+    # === Per-Domain Breakdown ===
+    print("\n[Per-Domain Metrics]")
+    domain_reports = {}
     for domain in df_test["Domain"].unique():
         idxs = df_test[df_test["Domain"] == domain].index
         macro_f1_dom = f1_score(y_test[idxs], y_pred_bin[idxs], average="macro", zero_division=0)
-        print(f"{domain}: {macro_f1_dom:.4f}")
+        micro_f1_dom = f1_score(y_test[idxs], y_pred_bin[idxs], average="micro", zero_division=0)
+        exact_dom = (y_pred_bin[idxs] == y_test[idxs]).all(axis=1).mean()
 
-    # ===============================
-    # PER CLASS EVALUATION
-    # ===============================
+        print(f"{domain}: Macro F1 = {macro_f1_dom:.4f} | Micro F1 = {micro_f1_dom:.4f} | Exact Match = {exact_dom:.4f}")
+        domain_reports[domain] = {
+            "macro_f1": macro_f1_dom,
+            "micro_f1": micro_f1_dom,
+            "exact": exact_dom
+        }
+
+    # === Per-Class Metrics ===
     print("\n[Per-Class F1 Score]")
-    report = classification_report(y_test, y_pred_bin, target_names=mlb.classes_, zero_division=0, output_dict=False)
+    report = classification_report(y_test, y_pred_bin, target_names=filtered_labels, zero_division=0)
     print(report)
+
+    return {
+        "macro": macro_f1,
+        "micro": micro_f1,
+        "exact": exact,
+        "labels_used": filtered_labels.tolist(),
+        "overall_report": classification_report(y_test, y_pred_bin, target_names=filtered_labels, zero_division=0, output_dict=True),
+        "domain_reports": domain_reports
+    }
+
 
 
 
