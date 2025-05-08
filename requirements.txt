@@ -1,0 +1,17 @@
+torch
+pandas
+numpy
+scikit-learn
+sentencepiece
+sentencepiece
+nltk
+wordcloud
+seaborn
+shap==0.47.1
+captum==0.8.0
+hf_xet==1.0.0
+matplotlib_venn==1.1.2
+adapter-transformers
+accelerate
+optuna
+scikit-multilearn
