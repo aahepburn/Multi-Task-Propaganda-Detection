@@ -524,7 +524,7 @@ def prepare_data_STL_hierarchical(TASK,
     test_s2_labels = pd.read_csv("Data/test-S2-labels.csv")
 
     test_s1_labels.rename(columns={"Translated_Entity": "Entity"}, inplace=True)
-    test_s2_labels.columns = ["Filename", "Narrative", "Subnarrative"]
+  
 
     filtered_articles = articles[articles["Domain"].isin(train_domains)]
     if "ALL" not in train_languages:

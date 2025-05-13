@@ -533,3 +533,96 @@ def prepare_data_MTL_coarse(TASK, model_name, max_len, batch_size, train_domains
         make_loader(df_test_s2["Translated_Text"].tolist(), y_test_s2, "narrative_classification", tokenizer, max_len, batch_size, shuffle=False),
         {"entity_framing": y_train_s1.shape[1], "narrative_classification": y_train_s2.shape[1]}
     )
+
+
+def prepare_data_MTL_mixed(
+    task,
+    train_domains,
+    test_domains,
+    train_languages,
+    model_name,
+    max_len,
+    batch_size,
+    granularity_s1="fine",
+    granularity_s2="fine"
+):
+    # Load task 1
+    if granularity_s1 == "fine":
+        (
+            df_train_s1, df_val_s1, df_test_s1, y_train_s1, y_val_s1, y_test_s1, mlb_s1,
+            _, _, _, _, _, _, _,  # ignore task2 outputs
+            train_loader_s1, val_loader_s1, test_loader_s1,
+            _, _, _
+        ) = prepare_data_MTL_fine_flat(
+            task,
+            train_domains=train_domains,
+            test_domains=test_domains,
+            train_languages=train_languages,
+            model_name=model_name,
+            max_len=max_len,
+            batch_size=batch_size
+        )
+    elif granularity_s1 == "coarse":
+        (
+            df_train_s1, df_val_s1, df_test_s1, y_train_s1, y_val_s1, y_test_s1, mlb_s1,
+            _, _, _, _, _, _, _,  # ignore task2 outputs
+            train_loader_s1, val_loader_s1, test_loader_s1,
+            _, _, _
+        ) = prepare_data_MTL_coarse(
+            task,
+            train_domains=train_domains,
+            test_domains=test_domains,
+            train_languages=train_languages,
+            model_name=model_name,
+            max_len=max_len,
+            batch_size=batch_size
+        )
+
+    # Load task 2
+    if granularity_s2 == "fine":
+        (
+            _, _, _, _, _, _, _,
+            df_train_s2, df_val_s2, df_test_s2, y_train_s2, y_val_s2, y_test_s2, mlb_s2,
+            _, _, _,
+            train_loader_s2, val_loader_s2, test_loader_s2,
+            _
+        ) = prepare_data_MTL_fine_flat(
+            task,
+            train_domains=train_domains,
+            test_domains=test_domains,
+            train_languages=train_languages,
+            model_name=model_name,
+            max_len=max_len,
+            batch_size=batch_size
+        )
+    elif granularity_s2 == "coarse":
+        (
+            _, _, _, _, _, _, _,
+            df_train_s2, df_val_s2, df_test_s2, y_train_s2, y_val_s2, y_test_s2, mlb_s2,
+            _, _, _,
+            train_loader_s2, val_loader_s2, test_loader_s2,
+            _
+        ) = prepare_data_MTL_coarse(
+            task,
+            train_domains=train_domains,
+            test_domains=test_domains,
+            train_languages=train_languages,
+            model_name=model_name,
+            max_len=max_len,
+            batch_size=batch_size
+        )
+
+    # Class count dictionary (can be reassembled from mlb)
+    num_classes_dict = {
+        "task1": len(mlb_s1.classes_),
+        "task2": len(mlb_s2.classes_)
+    }
+
+    return (
+        df_train_s1, df_val_s1, df_test_s1, y_train_s1, y_val_s1, y_test_s1, mlb_s1,
+        df_train_s2, df_val_s2, df_test_s2, y_train_s2, y_val_s2, y_test_s2, mlb_s2,
+        train_loader_s1, val_loader_s1, test_loader_s1,
+        train_loader_s2, val_loader_s2, test_loader_s2,
+        num_classes_dict
+    )
+
