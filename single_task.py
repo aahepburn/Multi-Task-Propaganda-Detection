@@ -62,7 +62,7 @@ class MultiLabelDataset(Dataset):
 class TransformerClassifier(nn.Module):
     def __init__(self, model_name, num_classes):
         super().__init__()
-        self.encoder = AutoModel.from_pretrained(model_name)
+        self.encoder = AutoModel.from_pretrained(model_name, force_download=True)
         self.dropout = nn.Dropout(0.3)
         self.classifier = nn.Linear(self.encoder.config.hidden_size, num_classes)
 
