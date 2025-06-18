@@ -2,8 +2,11 @@
 
 I run all my experiments from **master_notebook.ipynb**. The notebook makes calls to relevant APIs, which are stored in respective .py files. The most interesting files to look at would be **single_task.py** and **multi_task.py**, which contain all of the model classes I used in my experiments.
 
+![Pipeline Concept](https://github.com/user-attachments/assets/80152276-9639-4dae-9f67-8f8ad462face)
 
-![Pipeline-concept](https://github.com/user-attachments/assets/6668511f-0b85-454d-913d-480fd14fd3ea)
+**Figure 1:** Visual Summary of the Data Pipeline
+
+
 
 
 ## Abstract:
