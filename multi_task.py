@@ -297,7 +297,7 @@ class AdapterMultiTaskTransformer(nn.Module):
         self.hidden_size = self.encoder.config.hidden_size
         self.dropout = nn.Dropout(0.3)
 
-        # Task adapters (PALs)
+        # Task adapters 
         self.adapters = nn.ModuleDict({
             "narrative_classification": TaskAdapter(self.hidden_size, adapter_dim),
             "entity_framing": TaskAdapter(self.hidden_size, adapter_dim)
