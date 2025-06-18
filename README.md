@@ -41,12 +41,3 @@ Together, these questions establish an empirical framework for theorising whethe
 
 **Figure 2:** Multi-task learning setup and multi-task learning with task-specific adapters (blue). Both setups fine-tune the parameters of shared encoder by optimising their summed loss. The single-task learning setup consists of only one of the tasks during training and does not include an adapter.
 
-
-
-
-
-
-![Model-Setup-Horizontal](https://github.com/user-attachments/assets/b08d8629-2448-43cf-838e-2b00bdf4e2d3)
-![Model-Setup-Horizontal](https://github.com/user-attachments/assets/b08d8629-2448-43cf-838e-2b00bdf4e2d3)
-![Model-Setup-Horizontal](https://github.com/user-attachments/assets/f25e18e0-7207-4fdd-91d5-b75f7344e1ad)
-![Model-Setup-Horizontal](https://github.com/user-attachments/assets/f25e18e0-7207-4fdd-91d5-b75f7344e1ad)
