@@ -4,11 +4,6 @@ I run all my experiments from **master_notebook.ipynb**. The notebook makes call
 
 
 ![Pipeline-concept](https://github.com/user-attachments/assets/6668511f-0b85-454d-913d-480fd14fd3ea)
-![Pipeline-concept](https://github.com/user-attachments/assets/6668511f-0b85-454d-913d-480fd14fd3ea)
-
-
-
-
 
 
 ## Abstract:
@@ -36,6 +31,10 @@ RQ3: To what extent does MTL learn domain-invariant representations of persuasiv
 
 
 Together, these questions establish an empirical framework for theorising whether multi-task learning architectures can capture transferable linguistic representations of persuasion techniques, thereby improving out-of-domain generalisation.
+
+![Model-Setup-concept](https://github.com/user-attachments/assets/d0bde71d-41d4-4421-8f69-2a67a5460d0b)
+
+
 
 
 
