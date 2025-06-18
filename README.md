@@ -35,9 +35,18 @@ RQ3: To what extent does MTL learn domain-invariant representations of persuasiv
 
 Together, these questions establish an empirical framework for theorising whether multi-task learning architectures can capture transferable linguistic representations of persuasion techniques, thereby improving out-of-domain generalisation.
 
-![Model-Setup-concept](https://github.com/user-attachments/assets/d0bde71d-41d4-4421-8f69-2a67a5460d0b)
+## Model Architecture
+
+![Model-Setup-Horizontal](https://github.com/user-attachments/assets/266dd68f-6e8c-47ee-ab29-3bd7f631463e)
+
+**Figure 2:** Multi-task learning setup and multi-task learning with task-specific adapters (blue). Both setups fine-tune the parameters of shared encoder by optimising their summed loss. The single-task learning setup consists of only one of the tasks during training and does not include an adapter.
 
 
 
 
 
+
+![Model-Setup-Horizontal](https://github.com/user-attachments/assets/b08d8629-2448-43cf-838e-2b00bdf4e2d3)
+![Model-Setup-Horizontal](https://github.com/user-attachments/assets/b08d8629-2448-43cf-838e-2b00bdf4e2d3)
+![Model-Setup-Horizontal](https://github.com/user-attachments/assets/f25e18e0-7207-4fdd-91d5-b75f7344e1ad)
+![Model-Setup-Horizontal](https://github.com/user-attachments/assets/f25e18e0-7207-4fdd-91d5-b75f7344e1ad)
