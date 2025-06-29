@@ -63,7 +63,7 @@ def evaluate_flat(model, loader, df_source, mlb, device, label="TEST", threshold
 
     y_pred_bin = (y_pred > threshold).astype(int)
 
-    # filter columns where y_true or y_pred has no samples (i.e., unseen label)
+    # filter columns where y_true or y_pred has no samples
     mask = (y_true.sum(axis=0) + y_pred_bin.sum(axis=0)) > 0
     y_true = y_true[:, mask]
     y_pred_bin = y_pred_bin[:, mask]
@@ -256,106 +256,6 @@ def evaluate_per_class_flat(model, loader, df_source, mlb, device, label="TEST",
     }
 
 
-# ==========================
-# FIXED THRESHOLD EVALUATION (HIERARCHY-AWARE)
-# ==========================
-
-def evaluate_hierarchy(model,loader, df_source, mlb, device, label="TEST", threshold=0.35): 
-    model.eval()
-    y_true, y_pred, domains = [], [], []
-
-    with torch.no_grad():
-        for i, batch in enumerate(tqdm(loader, desc=f"Evaluating " + label)):
-            input_ids = batch["input_ids"].to(device)
-            attention_mask = batch["attention_mask"].to(device)
-            labels = batch["labels"].cpu().numpy()
-
-            outputs = model(input_ids, attention_mask)
-            probs = torch.sigmoid(outputs).cpu().numpy()
-
-            y_pred.extend(probs)
-            y_true.extend(labels)
-
-            start = i * loader.batch_size
-            end = start + len(labels)
-            domains.extend(df_source["Domain"].iloc[start:end].tolist())
-
-    y_true = np.array(y_true)
-    y_pred = np.array(y_pred)
-    domains = np.array(domains)
-
-    #  Enforce hierarchy before thresholding
-    y_pred_tensor = torch.tensor(y_pred).float()
-    y_pred_tensor = apply_hierarchical_constraints(y_pred_tensor, child_to_parent, label_to_index)
-    y_pred = y_pred_tensor.cpu().numpy()
-
-    y_pred_bin = (y_pred > threshold).astype(int)
-
-    #  Filter out completely unseen labels
-    mask = (y_true.sum(axis=0) + y_pred_bin.sum(axis=0)) > 0
-    y_true = y_true[:, mask]
-    y_pred_bin = y_pred_bin[:, mask]
-    filtered_labels = np.array(mlb.classes_)[mask]
-
-    macro = f1_score(y_true, y_pred_bin, average="macro", zero_division=0)
-    micro = f1_score(y_true, y_pred_bin, average="micro", zero_division=0)
-    exact = (y_pred_bin == y_true).all(axis=1).mean()
-
-    print(f"\n{label} (Fixed Threshold={threshold:.2f}):")
-    print(f"Macro F1: {macro:.3f}")
-    print(f"Micro F1: {micro:.3f}")
-    print(f"Exact Match: {exact:.3f}")
-
-    print("\n----------------------------")
-    print("Per-Domain Breakdown")
-    print("----------------------------")
-    for domain in np.unique(domains):
-        idx = np.where(domains == domain)[0]
-        y_true_d = y_true[idx]
-        y_pred_d = y_pred_bin[idx]
-
-        macro_d = f1_score(y_true_d, y_pred_d, average="macro", zero_division=0)
-        micro_d = f1_score(y_true_d, y_pred_d, average="micro", zero_division=0)
-        exact_d = (y_pred_d == y_true_d).all(axis=1).mean()
-
-        print(f"\nDomain: {domain}")
-        print(f"Macro F1: {macro_d:.3f}")
-        print(f"Micro F1: {micro_d:.3f}")
-        print(f"Exact Match: {exact_d:.3f}")
-
-    return {
-        "macro": macro,
-        "micro": micro,
-        "exact": exact,
-        "threshold": threshold,
-        "labels_used": filtered_labels.tolist()
-    }
-
-
-def evaluate_per_domain_hierarchy(val_loader, df_val, test_loader, df_test, mlb, threshold=0.35):
-    print("\n=========================")
-    print("Validation (Fixed Threshold)")
-    print("=========================")
-    val_results = evaluate_hierarchy(val_loader, df_val.reset_index(drop=True), mlb, device, label="VALIDATION", threshold=threshold)
-
-    print("\n=========================")
-    print("Test (Fixed Threshold)")
-    print("=========================")
-    test_results = evaluate_hierarchy(test_loader, df_test.reset_index(drop=True), mlb, device, label="TEST", threshold=threshold)
-
-    print("\n=========================")
-    print("OOD Generalization (Fixed Threshold)")
-    print("=========================")
-    macro_drop = val_results["macro"] - test_results["macro"]
-    print(f"Δ Macro F1 (val - test): {macro_drop:.3f}")
-
-    return {
-        "val": val_results,
-        "test": test_results,
-        "ood_gap_macro": macro_drop
-    }
-
-
 
 
 # ==========================
@@ -505,116 +405,7 @@ def evaluate_mtl_all_tasks(
 
 
 
-def evaluate_mtl_hierarchical_task(model, test_loader, df_test, y_test, mlb, task_name, child_to_parent, label_to_index, device):
-    model.eval()
-    y_pred = []
-    with torch.no_grad():
-        for batch in test_loader:
-            input_ids = batch["input_ids"].to(device)
-            attention_mask = batch["attention_mask"].to(device)
-            outputs = model(input_ids, attention_mask, task=task_name)
-            probs = torch.sigmoid(outputs).cpu().numpy()
-            y_pred.extend(probs)
 
-    y_pred = np.array(y_pred)
-    y_pred_bin = (y_pred > 0.25).astype(float)
-
-    # Apply hierarchical constraints
-    y_pred_bin = apply_hierarchical_constraints_mtl(y_pred_bin, child_to_parent, label_to_index).astype(int)
-
-    # Filter unused labels (for safe reporting)
-    mask = (y_test.sum(axis=0) + y_pred_bin.sum(axis=0)) > 0
-    y_test = y_test[:, mask]
-    y_pred_bin = y_pred_bin[:, mask]
-    filtered_labels = np.array(mlb.classes_)[mask]
-
-    # === Overall Metrics ===
-    macro_f1 = f1_score(y_test, y_pred_bin, average="macro", zero_division=0)
-    micro_f1 = f1_score(y_test, y_pred_bin, average="micro", zero_division=0)
-    exact = (y_pred_bin == y_test).all(axis=1).mean()
-
-    print(f"\n[Hierarchical Evaluation] Task: {task_name}")
-    print(f"Macro F1: {macro_f1:.4f}")
-    print(f"Micro F1: {micro_f1:.4f}")
-    print(f"Exact Match: {exact:.4f}")
-
-    # === Per-Domain Breakdown ===
-    print("\n[Per-Domain Metrics]")
-    domain_reports = {}
-    for domain in df_test["Domain"].unique():
-        idxs = df_test[df_test["Domain"] == domain].index
-        macro_f1_dom = f1_score(y_test[idxs], y_pred_bin[idxs], average="macro", zero_division=0)
-        micro_f1_dom = f1_score(y_test[idxs], y_pred_bin[idxs], average="micro", zero_division=0)
-        exact_dom = (y_pred_bin[idxs] == y_test[idxs]).all(axis=1).mean()
-
-        print(f"{domain}: Macro F1 = {macro_f1_dom:.4f} | Micro F1 = {micro_f1_dom:.4f} | Exact Match = {exact_dom:.4f}")
-        domain_reports[domain] = {
-            "macro_f1": macro_f1_dom,
-            "micro_f1": micro_f1_dom,
-            "exact": exact_dom
-        }
-
-    # === Per-Class Metrics ===
-    print("\n[Per-Class F1 Score]")
-    report = classification_report(y_test, y_pred_bin, target_names=filtered_labels, zero_division=0)
-    print(report)
-
-    return {
-        "macro": macro_f1,
-        "micro": micro_f1,
-        "exact": exact,
-        "labels_used": filtered_labels.tolist(),
-        "overall_report": classification_report(y_test, y_pred_bin, target_names=filtered_labels, zero_division=0, output_dict=True),
-        "domain_reports": domain_reports
-    }
-
-
-
-
-def evaluate_mtl_hierarchical_all_tasks(
-    model,
-    test_loaders,
-    df_tests,
-    y_tests,
-    mlbs,
-    child_to_parent_map,
-    label_to_index_map,
-    device
-):
-    print("\n========== MTL Hierarchical Evaluation ==========\n")
-    for task in test_loaders:
-        evaluate_mtl_hierarchical_task(
-            model=model,
-            test_loader=test_loaders[task],
-            df_test=df_tests[task],
-            y_test=y_tests[task],
-            mlb=mlbs[task],
-            task_name=task,
-            child_to_parent=child_to_parent_map[task],
-            label_to_index=label_to_index_map[task],
-            device=device
-        )
-
-
-def apply_hierarchical_constraints_mtl(preds, child_to_parent, label_to_index):
-    """
-    preds = tensor of shape (batch_size, num_classes), after sigmoid
-    child_to_parent = dict[str, str]
-    label_to_index = dict[str, int]
-    """
-    for child, parent in child_to_parent.items():
-        if child in label_to_index and parent in label_to_index:
-            child_idx = label_to_index[child]
-            parent_idx = label_to_index[parent]
-            preds[:, child_idx] *= preds[:, parent_idx] >= 0.5
-    return preds
-
-
-
-from sklearn.metrics import f1_score
-import numpy as np
-import torch
-from tqdm import tqdm
 
 def evaluate_flat_custom(model, loader, df_source, mlb, device, label="TEST", threshold=0.5, task=None):
     model.eval()
@@ -655,9 +446,6 @@ def evaluate_flat_custom(model, loader, df_source, mlb, device, label="TEST", th
     }
 
 
-
-
-from sklearn.metrics import classification_report
 from collections import defaultdict
 
 def compute_coarse_from_fine_report(y_true, y_pred, mlb_classes, taxonomy_map):
@@ -687,8 +475,6 @@ def compute_coarse_from_fine_report(y_true, y_pred, mlb_classes, taxonomy_map):
     return coarse_results, round(macro_coarse_f1, 4)
 
 
-from sklearn.metrics import f1_score
-import numpy as np
 
 def compute_fine_vs_coarse_metrics(y_true, y_pred, label_list, coarse_label_list):
     """
@@ -738,7 +524,6 @@ def get_coarse_label_list(task):
     
     elif task == "narrative_classification":
         return [
-            # War-related (URW)
             "URW: Blaming the war on others rather than the invader",
             "URW: Discrediting Ukraine",
             "URW: Russia is the Victim",
@@ -751,7 +536,6 @@ def get_coarse_label_list(task):
             "URW: Amplifying war-related fears",
             "URW: Hidden plots by secret schemes of powerful groups",
 
-            # Climate-related (CC)
             "CC: Criticism of climate policies",
             "CC: Criticism of institutions and authorities",
             "CC: Climate change is beneficial",
